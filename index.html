@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .explainer-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 7, 15, 0.95);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        color: white;
+      }
+
+      .explainer-content {
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 2rem;
+        border-radius: 15px;
+        max-width: 600px;
+        text-align: center;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .explainer-content h2 {
+        color: #00b1db;
+        margin-bottom: 1.5rem;
+      }
+
+      .explainer-content p {
+        margin-bottom: 1rem;
+        line-height: 1.6;
+      }
+
+      .explainer-content ul {
+        text-align: left;
+        margin: 1rem 0;
+        padding-left: 2rem;
+      }
+
+      .explainer-content li {
+        margin: 0.5rem 0;
+      }
+
+      .free-music-note {
+        font-weight: bold;
+        color: #4caf50;
+        font-size: 1.1em;
+        margin-top: 1.5rem;
+      }
+
+      .explainer-close {
+        background-color: #00b1db;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-size: 1.1em;
+        cursor: pointer;
+        margin-top: 1.5rem;
+        transition: background-color 0.3s;
+      }
+
+      .explainer-close:hover {
+        background-color: #0089a8;
+      }
+
+      .matrix-container {
+        display: grid;
+        gap: 2px;
+        width: fit-content;
+        background: #e0e0e0;
+        margin-top: 20px;
+      }
+
+      .flag-cell {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 24px;
+      }
+
+      .header-cell {
+        background-color: #f0f0f0;
+        border: 1px solid #00b1db;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        text-align: center;
+        min-width: 100px;
+        min-height: 100px;
+      }
+
+      .matrix-cell {
+        background-color: #e0e0e0;
+        border: 1px solid #5c5c5c;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: all 0.3s;
+        min-width: 100px;
+        min-height: 100px;
+      }
+
+      .matrix-cell:hover {
+        background-color: #d0d0d0;
+      }
+
+      .matrix-cell:active {
+        background-color: #c0c0c0;
+      }
+
+      .playing {
+        background-color: #aad1da;
+        box-shadow: 0 0 20px #00b1db;
+        border-color: #00b1db;
+      }
+
+      .country-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .flag {
+        font-size: 24px;
+      }
+      .cell {
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        margin: 2px;
+        padding: 10px;
+        transition: background-color 0.3s;
+      }
+
+      .cell:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: rgb(0, 7, 15);
+        padding: 20px;
+        color: rgb(0, 7, 15);
+      }
+      #downloadButton {
+        display: none;
+        background-color: #4caf50;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+        font-size: 16px;
+        transition: background-color 0.3s;
+      }
+
+      #downloadButton:hover {
+        background-color: #45a049;
+      }
+
+      #downloadButton:active {
+        background-color: #3d8b40;
+      }
+      .coffee-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffdd00;
+        padding: 10px;
+        border-radius: 5px;
+        transition: color 0.3s;
+        text-decoration: none;
+      }
+
+      .coffee-link:hover {
+        color: #ffb100;
+      }
+      #stopButton {
+        display: none;
+        background-color: #ff4444;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+        font-size: 16px;
+        transition: background-color 0.3s;
+      }
+
+      #stopButton:hover {
+        background-color: #cc0000;
+      }
+
+      #stopButton:active {
+        background-color: #990000;
+      }
+      .visualization-container {
+        display: flex;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      #spectrogram {
+        width: 512px;
+        height: 150px;
+        background: rgb(0, 7, 15);
+      }
+
+      .logo {
+        width: 150px;
+        height: 150px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="explainer-overlay" class="explainer-overlay">
+      <div class="explainer-content">
+        <h2>Welcome to the Music Hybridisation Lab! 🎵</h2>
+        <p>
+          This interactive tool lets you explore musical fusions between
+          different cultures. Click on any cell in the matrix to hear unique
+          hybrid compositions.
+        </p>
+        <ul>
+          <li>Diagonal cells: Traditional music from a single country</li>
+          <li>
+            Other cells: Hybrid compositions combining two musical traditions
+          </li>
+          <li>Use arrow keys to navigate the matrix</li>
+        </ul>
+        <p class="free-music-note">🎁 All music is free to download and use!</p>
+        <button id="explainer-close" class="explainer-close">
+          Start Exploring
+        </button>
+      </div>
+    </div>
+
+    <div class="visualization-container">
+      <img src="logo.png" alt="Logo" class="logo" id="logoImg" />
+      <video
+        src="logo.mp4"
+        class="logo"
+        muted
+        id="logoVideo"
+        style="display: none"
+      ></video>
+      <canvas id="spectrogram"></canvas>
+      <button id="downloadButton" aria-label="Download Current Song">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+      </button>
+      <a
+        href="https://buymeacoffee.com/fi4cr"
+        target="_blank"
+        class="coffee-link"
+        aria-label="Buy me a coffee"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4v-2z"
+          />
+        </svg>
+      </a>
+      <button id="stopButton" aria-label="Stop Audio">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <rect x="4" y="4" width="16" height="16" />
+        </svg>
+      </button>
+    </div>
+    <div class="matrix-container" id="matrix-container"></div>
+
+    <script>
+      let currentRow = 0;
+      let currentCol = 0;
+
+      const countries = [
+        { name: "Jamaica", flag: "🇯🇲" },
+        { name: "Spain", flag: "🇪🇸" },
+        { name: "DRC", flag: "🇨🇩" },
+        { name: "China", flag: "🇨🇳" },
+        { name: "France", flag: "🇫🇷" },
+        { name: "India", flag: "🇮🇳" },
+        { name: "Germany", flag: "🇩🇪" },
+        { name: "Nigeria", flag: "🇳🇬" },
+        { name: "Ireland", flag: "🇮🇪" },
+      ];
+
+      const matrix = countries.map((row, i) =>
+        countries.map((col, j) => (i === j ? [row] : [row, col]))
+      );
+
+      let currentAudio = null;
+      let currentPlayingCell = null;
+      let selectedCell = null;
+      let audioContext;
+      let analyser;
+      let source;
+      const canvas = document.getElementById("spectrogram");
+      const canvasCtx = canvas.getContext("2d");
+
+      canvas.width = 508;
+      canvas.height = 150;
+
+      let currentAudioFile = "";
+      const downloadButton = document.getElementById("downloadButton");
+      const stopButton = document.getElementById("stopButton");
+
+      stopButton.addEventListener("click", stopAudio);
+
+      downloadButton.addEventListener("click", function () {
+        if (currentAudioFile) {
+          const link = document.createElement("a");
+          link.href = currentAudioFile;
+          link.download = currentAudioFile.split("/").pop();
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      });
+
+      function initAudioContext() {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 2048;
+        }
+      }
+
+      function setupAudioVisualization(audio) {
+        initAudioContext();
+
+        if (source) {
+          source.disconnect();
+        }
+
+        source = audioContext.createMediaElementSource(audio);
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+        function draw() {
+          if (!currentAudio) {
+            canvasCtx.fillStyle = "#e0e0e0";
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+            return;
+          }
+
+          requestAnimationFrame(draw);
+          analyser.getByteFrequencyData(dataArray);
+
+          canvasCtx.fillStyle = "#e0e0e0";
+          canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+          const barWidth = (canvas.width / bufferLength) * 2.5;
+          let barHeight;
+          let x = 0;
+
+          for (let i = 0; i < bufferLength; i++) {
+            barHeight = dataArray[i] / 2;
+
+            const gradient = canvasCtx.createLinearGradient(
+              0,
+              canvas.height - barHeight,
+              0,
+              canvas.height
+            );
+            gradient.addColorStop(
+              0,
+              `hsla(${(i / bufferLength) * 360}, 70%, 50%, 0.8)`
+            );
+            gradient.addColorStop(
+              1,
+              `hsla(${(i / bufferLength) * 360}, 70%, 30%, 0.8)`
+            );
+
+            canvasCtx.fillStyle = gradient;
+            canvasCtx.fillRect(
+              x,
+              canvas.height - barHeight,
+              barWidth,
+              barHeight
+            );
+
+            x += barWidth + 1;
+          }
+        }
+
+        draw();
+      }
+
+      function generateMatrixGrid() {
+        const container = document.getElementById("matrix-container");
+        const numCountries = countries.length;
+
+        container.style.gridTemplateColumns = `100px repeat(${numCountries}, 100px)`;
+        container.style.gridTemplateRows = `repeat(${numCountries + 1}, 100px)`;
+
+        // Top-left empty cell
+        const topLeft = document.createElement("div");
+        topLeft.classList.add("flag-cell");
+        container.appendChild(topLeft);
+
+        // Header row
+        countries.forEach((country) => {
+          const header = document.createElement("div");
+          header.classList.add("header-cell");
+          header.innerHTML = `
+            <div class="country-header">
+              <span>${country.name}</span>
+              <span class="flag">${country.flag}</span>
+            </div>
+          `;
+          container.appendChild(header);
+        });
+
+        // Matrix rows
+        countries.forEach((rowCountry, rowIndex) => {
+          // Row header
+          const rowHeader = document.createElement("div");
+          rowHeader.classList.add("header-cell");
+          rowHeader.innerHTML = `
+            <div class="country-header">
+              <span>${rowCountry.name}</span>
+              <span class="flag">${rowCountry.flag}</span>
+            </div>
+          `;
+          container.appendChild(rowHeader);
+
+          // Matrix cells
+          countries.forEach((colCountry, colIndex) => {
+            const cell = document.createElement("div");
+            cell.classList.add("matrix-cell");
+            cell.dataset.row = rowIndex;
+            cell.dataset.col = colIndex;
+            cell.id = `${rowCountry.name.toLowerCase()}-${colCountry.name.toLowerCase()}`;
+
+            const cellCountries = matrix[rowIndex][colIndex];
+            if (cellCountries.length === 1) {
+              // Single country cell
+              cell.innerHTML = `
+                <div class="flags-container">
+                  <span class="flag">${cellCountries[0].flag}</span>
+                </div>
+              `;
+            } else {
+              // Mixed country cell
+              cell.innerHTML = `
+                <div class="flags-container">
+                  <span class="flag">${cellCountries[0].flag}</span>
+                  <span class="plus-sign">+</span>
+                  <span class="flag">${cellCountries[1].flag}</span>
+                </div>
+              `;
+            }
+
+            cell.onclick = () => {
+              const countriesToPlay = cellCountries.map(
+                (country) => country.name
+              );
+              playAudio(countriesToPlay, cell);
+            };
+
+            container.appendChild(cell);
+          });
+        });
+      }
+
+      async function findAudioFile(countries) {
+        if (countries.length === 1) {
+          return `${countries[0]}.mp3`;
+        }
+
+        // Try first combination
+        const filename1 = `${countries[0]} ${countries[1]}.mp3`;
+        try {
+          const response1 = await fetch(filename1);
+          if (response1.ok) return filename1;
+        } catch (e) {}
+
+        // Try reversed combination
+        const filename2 = `${countries[1]} ${countries[0]}.mp3`;
+        try {
+          const response2 = await fetch(filename2);
+          if (response2.ok) return filename2;
+        } catch (e) {}
+
+        // If neither exists, return the first filename (it will fail gracefully)
+        return filename1;
+      }
+
+      function stopAudio() {
+        if (currentAudio) {
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
+          currentPlayingCell.classList.remove("playing");
+          currentAudio = null;
+          currentPlayingCell = null;
+          downloadButton.style.display = "none";
+          currentAudioFile = "";
+        }
+      }
+
+      async function playAudio(countries, cell) {
+        const logoVideo = document.getElementById("logoVideo");
+        const logoImg = document.getElementById("logoImg");
+
+        if (currentAudio) {
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
+          if (currentPlayingCell) {
+            currentPlayingCell.classList.remove("playing");
+          }
+        }
+
+        stopButton.style.display = "block";
+        logoImg.style.display = "none";
+        logoVideo.style.display = "block";
+        logoVideo.currentTime = 0;
+        logoVideo.play();
+
+        let audioFile;
+        try {
+          audioFile = await findAudioFile(countries);
+          currentAudioFile = audioFile;
+          downloadButton.style.display = "block";
+        } catch (error) {
+          console.error("Error finding audio file:", error);
+          // Still proceed with visual feedback even if audio fails
+          selectCell(
+            cell,
+            parseInt(cell.dataset.row),
+            parseInt(cell.dataset.col)
+          );
+          return;
+        }
+
+        currentAudio = new Audio(audioFile);
+        currentPlayingCell = cell;
+
+        selectCell(
+          cell,
+          parseInt(cell.dataset.row),
+          parseInt(cell.dataset.col)
+        );
+
+        currentAudio
+          .play()
+          .then(() => {
+            setupAudioVisualization(currentAudio);
+          })
+          .catch((error) => {
+            console.error("Error playing audio:", error);
+            if (countries.length > 1) {
+              countries.reverse();
+              findAudioFile(countries)
+                .then((reversedAudioFile) => {
+                  currentAudio = new Audio(reversedAudioFile);
+                  return currentAudio.play();
+                })
+                .then(() => setupAudioVisualization(currentAudio))
+                .catch((e) =>
+                  console.error("Error playing reversed audio:", e)
+                );
+            }
+          });
+
+        currentAudio.onended = function () {
+          cell.classList.remove("playing");
+          currentAudio = null;
+          currentPlayingCell = null;
+          stopButton.style.display = "none";
+          downloadButton.style.display = "none";
+          currentAudioFile = "";
+        };
+      }
+
+      function selectCell(cell, row, col) {
+        if (selectedCell) {
+          selectedCell.classList.remove("selected");
+        }
+
+        cell.classList.add("selected");
+        cell.classList.add("playing");
+        selectedCell = cell;
+        currentRow = row;
+        currentCol = col;
+      }
+
+      document.addEventListener("keydown", async function (event) {
+        if (
+          !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
+            event.key
+          )
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+
+        let newRow = currentRow;
+        let newCol = currentCol;
+
+        switch (event.key) {
+          case "ArrowUp":
+            newRow = Math.max(0, currentRow - 1);
+            break;
+          case "ArrowDown":
+            newRow = Math.min(matrix.length - 1, currentRow + 1);
+            break;
+          case "ArrowLeft":
+            newCol = Math.max(0, currentCol - 1);
+            break;
+          case "ArrowRight":
+            newCol = Math.min(matrix[0].length - 1, currentCol + 1);
+            break;
+        }
+
+        const nextCell = document.querySelector(
+          `[data-row="${newRow}"][data-col="${newCol}"]`
+        );
+        if (nextCell) {
+          const countriesToPlay = matrix[newRow][newCol].map(
+            (country) => country.name
+          );
+          await playAudio(countriesToPlay, nextCell);
+        }
+      });
+
+      window.onload = function () {
+        generateMatrixGrid();
+
+        // Handle explainer close
+        document
+          .getElementById("explainer-close")
+          .addEventListener("click", function () {
+            document.getElementById("explainer-overlay").style.display = "none";
+
+            // Play random cell after closing explainer
+            setTimeout(() => {
+              const randomRow = Math.floor(Math.random() * matrix.length);
+              const randomCol = Math.floor(Math.random() * matrix[0].length);
+              const randomCell = document.querySelector(
+                `[data-row="${randomRow}"][data-col="${randomCol}"]`
+              );
+              const countriesToPlay = matrix[randomRow][randomCol].map(
+                (country) => country.name
+              );
+              playAudio(countriesToPlay, randomCell);
+            }, 500);
+          });
+      };
+    </script>
+  </body>
+</html>
