@@ -237,7 +237,7 @@
       #spectrogram {
         width: 512px;
         height: 150px;
-        background: rgb(0, 7, 15);
+        background: #000;
       }
 
       .logo {
@@ -386,7 +386,7 @@
 
         function draw() {
           if (!currentAudio) {
-            canvasCtx.fillStyle = "#e0e0e0";
+            canvasCtx.fillStyle = "#000"; // Changed to black
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
             return;
           }
@@ -394,7 +394,7 @@
           requestAnimationFrame(draw);
           analyser.getByteFrequencyData(dataArray);
 
-          canvasCtx.fillStyle = "#e0e0e0";
+          canvasCtx.fillStyle = "#000"; // Changed to black
           canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
           const barWidth = (canvas.width / bufferLength) * 2.5;
