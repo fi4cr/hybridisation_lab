@@ -152,15 +152,15 @@
         padding: 80px;
         color: rgb(0, 7, 15);
       }
+
       #downloadButton {
-        display: none;
         position: fixed;
         bottom: 0;
         left: 0;
         width: 100%;
         background-color: #4caf50;
         color: white;
-        padding: 15px 20px;
+        padding: 25px 40px; 
         border: none;
         cursor: pointer;
         font-size: 18px;
@@ -186,6 +186,65 @@
         flex-direction: column;
         gap: 20px;
         width: 200px;
+      }
+      .progress-container {
+        position: fixed;
+        bottom: 80px; /* Increased from 60px to make room for download button */
+        left: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 10px 20px;
+        box-sizing: border-box;
+        z-index: 999;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .time-display {
+        color: white;
+        font-family: monospace;
+        min-width: 60px;
+        text-align: center;
+      }
+
+      .seek-bar {
+        flex-grow: 1;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+        position: relative;
+        cursor: pointer;
+      }
+
+      .seek-bar-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: #4caf50;
+        border-radius: 3px;
+      }
+
+      .seek-handle {
+        position: absolute;
+        top: 50%;
+        width: 16px;
+        height: 16px;
+        background: white;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        cursor: grab;
+      }
+
+      .seek-handle:active {
+        cursor: grabbing;
       }
 
       .button {
@@ -295,6 +354,16 @@
       </div>
     </div>
     <div class="matrix-container" id="matrix-container"></div>
+    <div class="progress-container">
+      <div class="progress-bar">
+        <span class="time-display" id="currentTime">0:00</span>
+        <div class="seek-bar" id="seekBar">
+          <div class="seek-bar-fill" id="seekBarFill"></div>
+          <div class="seek-handle" id="seekHandle"></div>
+        </div>
+        <span class="time-display" id="duration">0:00</span>
+      </div>
+    </div>
     <button id="downloadButton" aria-label="Download Current Song">
       <svg
         width="24"
@@ -358,6 +427,63 @@
           document.body.removeChild(link);
         }
       });
+
+      function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+      }
+
+      function updateProgressBar() {
+        if (!currentAudio) return;
+
+        const seekBar = document.getElementById("seekBar");
+        const seekBarFill = document.getElementById("seekBarFill");
+        const seekHandle = document.getElementById("seekHandle");
+        const currentTimeDisplay = document.getElementById("currentTime");
+        const durationDisplay = document.getElementById("duration");
+
+        const progress =
+          (currentAudio.currentTime / currentAudio.duration) * 100;
+        seekBarFill.style.width = `${progress}%`;
+        seekHandle.style.left = `${progress}%`;
+
+        currentTimeDisplay.textContent = formatTime(currentAudio.currentTime);
+        durationDisplay.textContent = formatTime(currentAudio.duration);
+      }
+
+      function initializeProgressBar() {
+        const seekBar = document.getElementById("seekBar");
+        const seekHandle = document.getElementById("seekHandle");
+        let isDragging = false;
+
+        seekBar.addEventListener("mousedown", (e) => {
+          if (!currentAudio) return;
+
+          const rect = seekBar.getBoundingClientRect();
+          const position = (e.clientX - rect.left) / rect.width;
+          currentAudio.currentTime = position * currentAudio.duration;
+          isDragging = true;
+        });
+
+        document.addEventListener("mousemove", (e) => {
+          if (!isDragging || !currentAudio) return;
+
+          const rect = seekBar.getBoundingClientRect();
+          const position = Math.max(
+            0,
+            Math.min(1, (e.clientX - rect.left) / rect.width)
+          );
+          currentAudio.currentTime = position * currentAudio.duration;
+        });
+
+        document.addEventListener("mouseup", () => {
+          isDragging = false;
+        });
+
+        // Update progress bar regularly
+        setInterval(updateProgressBar, 50);
+      }
 
       function initAudioContext() {
         if (!audioContext) {
@@ -536,6 +662,7 @@
 
       function stopAudio() {
         if (currentAudio) {
+          currentAudio.removeEventListener("timeupdate", updateProgressBar);
           currentAudio.pause();
           currentAudio.currentTime = 0;
           currentPlayingCell.classList.remove("playing");
@@ -571,7 +698,6 @@
           downloadButton.style.display = "block";
         } catch (error) {
           console.error("Error finding audio file:", error);
-          // Still proceed with visual feedback even if audio fails
           selectCell(
             cell,
             parseInt(cell.dataset.row),
@@ -583,6 +709,9 @@
         currentAudio = new Audio(audioFile);
         currentPlayingCell = cell;
 
+        // Add timeupdate event listener
+        currentAudio.addEventListener("timeupdate", updateProgressBar);
+
         selectCell(
           cell,
           parseInt(cell.dataset.row),
@@ -593,6 +722,7 @@
           .play()
           .then(() => {
             setupAudioVisualization(currentAudio);
+            updateProgressBar(); // Initial update
           })
           .catch((error) => {
             console.error("Error playing audio:", error);
@@ -601,9 +731,17 @@
               findAudioFile(countries)
                 .then((reversedAudioFile) => {
                   currentAudio = new Audio(reversedAudioFile);
+                  // Add timeupdate event listener for reversed audio
+                  currentAudio.addEventListener(
+                    "timeupdate",
+                    updateProgressBar
+                  );
                   return currentAudio.play();
                 })
-                .then(() => setupAudioVisualization(currentAudio))
+                .then(() => {
+                  setupAudioVisualization(currentAudio);
+                  updateProgressBar(); // Initial update
+                })
                 .catch((e) =>
                   console.error("Error playing reversed audio:", e)
                 );
