@@ -624,12 +624,16 @@
         countries.forEach((country) => {
           const header = document.createElement("div");
           header.classList.add("header-cell");
+          header.style.cursor = "pointer";
           header.innerHTML = `
-            <div class="country-header">
-              <span>${country.name}</span>
-              <span class="flag">${country.flag}</span>
-            </div>
-          `;
+    <div class="country-header">
+      <span>${country.name}</span>
+      <span class="flag">${country.flag}</span>
+    </div>
+  `;
+          header.onclick = () => {
+            playAudio([country.name], header);
+          };
           container.appendChild(header);
         });
 
@@ -638,12 +642,16 @@
           // Row header
           const rowHeader = document.createElement("div");
           rowHeader.classList.add("header-cell");
+          rowHeader.style.cursor = "pointer";
           rowHeader.innerHTML = `
-            <div class="country-header">
-              <span>${rowCountry.name}</span>
-              <span class="flag">${rowCountry.flag}</span>
-            </div>
-          `;
+    <div class="country-header">
+      <span>${rowCountry.name}</span>
+      <span class="flag">${rowCountry.flag}</span>
+    </div>
+  `;
+          rowHeader.onclick = () => {
+            playAudio([rowCountry.name], rowHeader);
+          };
           container.appendChild(rowHeader);
 
           // Matrix cells
