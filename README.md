@@ -12,7 +12,7 @@ The tracks were generated using:
 - Curation of generated outputs
 
 ## Listen
-The album is available at: [Hybridisation Lab on GitHub](https://github.com/fi4cr/hybridisation_lab)
+The album is available at: [Hybridisation Lab on GitHub](https://fi4cr.github.io/hybridisation_lab/)
 
 ## Technical Details
 - Created using Suno AI music generation
