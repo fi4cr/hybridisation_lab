@@ -145,6 +145,41 @@
         gap: 5px;
       }
 
+      .spinner-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 8px;
+      }
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f0f0f0;
+        border-top: 4px solid #00b1db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .loading {
+        position: relative;
+      }
+
       .flag {
         font-size: 28px;
       }
@@ -443,6 +478,8 @@
         { name: "Ireland", flag: "🇮🇪" },
       ];
 
+      const audioBufferCache = new Map();
+
       const matrix = countries.map((row, i) =>
         countries.map((col, j) => (i === j ? [row] : [row, col]))
       );
@@ -694,26 +731,44 @@
       }
 
       async function findAudioFile(countries) {
-        if (countries.length === 1) {
-          return `${countries[0]}.mp3`;
+        const filename =
+          countries.length === 1
+            ? `${countries[0]}.mp3`
+            : `${countries[0]} ${countries[1]}.mp3`;
+
+        // Check cache first
+        if (audioBufferCache.has(filename)) {
+          return audioBufferCache.get(filename);
         }
 
-        // Try first combination
-        const filename1 = `${countries[0]} ${countries[1]}.mp3`;
         try {
-          const response1 = await fetch(filename1);
-          if (response1.ok) return filename1;
-        } catch (e) {}
+          // First try regular filename
+          const response = await fetch(filename);
+          if (response.ok) {
+            const buffer = await response.blob();
+            audioBufferCache.set(filename, URL.createObjectURL(buffer));
+            return audioBufferCache.get(filename);
+          }
 
-        // Try reversed combination
-        const filename2 = `${countries[1]} ${countries[0]}.mp3`;
-        try {
-          const response2 = await fetch(filename2);
-          if (response2.ok) return filename2;
-        } catch (e) {}
+          // If not found and it's a hybrid, try reversed combination
+          if (countries.length > 1) {
+            const reversedFilename = `${countries[1]} ${countries[0]}.mp3`;
+            const reversedResponse = await fetch(reversedFilename);
+            if (reversedResponse.ok) {
+              const buffer = await reversedResponse.blob();
+              audioBufferCache.set(
+                reversedFilename,
+                URL.createObjectURL(buffer)
+              );
+              return audioBufferCache.get(reversedFilename);
+            }
+          }
 
-        // If neither exists, return the first filename (it will fail gracefully)
-        return filename1;
+          throw new Error("Audio file not found");
+        } catch (e) {
+          console.error("Error loading audio:", e);
+          throw e;
+        }
       }
 
       function stopAudio() {
@@ -732,6 +787,13 @@
       async function playAudio(countries, cell) {
         const logoVideo = document.getElementById("logoVideo");
         const logoImg = document.getElementById("logoImg");
+
+        // Show loading spinner
+        cell.classList.add("loading");
+        const spinner = document.createElement("div");
+        spinner.className = "spinner-overlay";
+        spinner.innerHTML = '<div class="spinner"></div>';
+        cell.appendChild(spinner);
 
         if (currentAudio) {
           currentAudio.pause();
@@ -752,8 +814,18 @@
           audioFile = await findAudioFile(countries);
           currentAudioFile = audioFile;
           downloadButton.style.display = "block";
+
+          if (audioBufferCache.size > 20) {
+            // Adjust this number based on your needs
+            const oldestKey = audioBufferCache.keys().next().value;
+            URL.revokeObjectURL(audioBufferCache.get(oldestKey));
+            audioBufferCache.delete(oldestKey);
+          }
         } catch (error) {
           console.error("Error finding audio file:", error);
+          // Remove spinner on error
+          cell.classList.remove("loading");
+          spinner.remove();
           selectCell(
             cell,
             parseInt(cell.dataset.row),
@@ -765,7 +837,6 @@
         currentAudio = new Audio(audioFile);
         currentPlayingCell = cell;
 
-        // Add timeupdate event listener
         currentAudio.addEventListener("timeupdate", updateProgressBar);
 
         selectCell(
@@ -774,35 +845,30 @@
           parseInt(cell.dataset.col)
         );
 
-        currentAudio
-          .play()
-          .then(() => {
-            setupAudioVisualization(currentAudio);
-            updateProgressBar(); // Initial update
-          })
-          .catch((error) => {
-            console.error("Error playing audio:", error);
-            if (countries.length > 1) {
-              countries.reverse();
-              findAudioFile(countries)
-                .then((reversedAudioFile) => {
-                  currentAudio = new Audio(reversedAudioFile);
-                  // Add timeupdate event listener for reversed audio
-                  currentAudio.addEventListener(
-                    "timeupdate",
-                    updateProgressBar
-                  );
-                  return currentAudio.play();
-                })
-                .then(() => {
-                  setupAudioVisualization(currentAudio);
-                  updateProgressBar(); // Initial update
-                })
-                .catch((e) =>
-                  console.error("Error playing reversed audio:", e)
-                );
+        try {
+          await currentAudio.play();
+          setupAudioVisualization(currentAudio);
+          updateProgressBar();
+        } catch (error) {
+          console.error("Error playing audio:", error);
+          if (countries.length > 1) {
+            countries.reverse();
+            try {
+              const reversedAudioFile = await findAudioFile(countries);
+              currentAudio = new Audio(reversedAudioFile);
+              currentAudio.addEventListener("timeupdate", updateProgressBar);
+              await currentAudio.play();
+              setupAudioVisualization(currentAudio);
+              updateProgressBar();
+            } catch (e) {
+              console.error("Error playing reversed audio:", e);
             }
-          });
+          }
+        } finally {
+          // Remove spinner once audio starts playing or if there's an error
+          cell.classList.remove("loading");
+          spinner.remove();
+        }
 
         currentAudio.onended = function () {
           cell.classList.remove("playing");
@@ -869,25 +935,50 @@
       window.onload = function () {
         generateMatrixGrid();
 
-        // Handle explainer close
+        const explainerOverlay = document.getElementById("explainer-overlay");
+        const explainerContent = document.querySelector(".explainer-content");
+
+        // Original explainer close button handler
         document
           .getElementById("explainer-close")
-          .addEventListener("click", function () {
-            document.getElementById("explainer-overlay").style.display = "none";
+          .addEventListener("click", closeExplainer);
 
-            // Play random cell after closing explainer
-            setTimeout(() => {
-              const randomRow = Math.floor(Math.random() * matrix.length);
-              const randomCol = Math.floor(Math.random() * matrix[0].length);
-              const randomCell = document.querySelector(
-                `[data-row="${randomRow}"][data-col="${randomCol}"]`
-              );
-              const countriesToPlay = matrix[randomRow][randomCol].map(
-                (country) => country.name
-              );
-              playAudio(countriesToPlay, randomCell);
-            }, 500);
-          });
+        // Close when clicking outside content area
+        explainerOverlay.addEventListener("click", function (e) {
+          if (e.target === explainerOverlay) {
+            closeExplainer();
+          }
+        });
+
+        window.addEventListener("beforeunload", () => {
+          // Revoke all object URLs to prevent memory leaks
+          audioBufferCache.forEach((url) => URL.revokeObjectURL(url));
+          audioBufferCache.clear();
+        });
+        
+        // Close when pressing Escape key
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && explainerOverlay.style.display !== "none") {
+            closeExplainer();
+          }
+        });
+
+        function closeExplainer() {
+          explainerOverlay.style.display = "none";
+
+          // Play random cell after closing explainer
+          setTimeout(() => {
+            const randomRow = Math.floor(Math.random() * matrix.length);
+            const randomCol = Math.floor(Math.random() * matrix[0].length);
+            const randomCell = document.querySelector(
+              `[data-row="${randomRow}"][data-col="${randomCol}"]`
+            );
+            const countriesToPlay = matrix[randomRow][randomCol].map(
+              (country) => country.name
+            );
+            playAudio(countriesToPlay, randomCell);
+          }, 500);
+        }
       };
     </script>
   </body>
