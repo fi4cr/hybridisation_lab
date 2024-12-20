@@ -97,20 +97,6 @@
         font-size: 28px;
       }
 
-      .header-cell {
-        background-color: #f8f8f8;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-weight: bold;
-        text-align: center;
-        min-width: 80px;
-        min-height: 80px;
-      }
-
       .matrix-cell {
         background-color: #f0f0f0;
         border: 1px solid #dadada;
@@ -123,12 +109,74 @@
         min-height: 80px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
       }
 
-      .matrix-cell:hover {
-        background-color: #e8e8e8;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      .matrix-cell:hover,
+      .matrix-cell:focus {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        border-color: #00b1db;
+      }
+
+      .matrix-cell:hover::before,
+      .matrix-cell:focus::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 177, 219, 0.1);
+        border-radius: 8px;
+      }
+
+      .matrix-cell:active {
+        transform: translateY(0);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .header-cell {
+        background-color: #f8f8f8;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        text-align: center;
+        min-width: 80px;
+        min-height: 80px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .header-cell:hover,
+      .header-cell:focus {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        border-color: #00b1db;
+      }
+
+      .header-cell:hover::before,
+      .header-cell:focus::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 177, 219, 0.1);
+        border-radius: 8px;
+      }
+
+      .header-cell:active {
+        transform: translateY(0);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       }
 
       .playing {
@@ -136,6 +184,74 @@
         box-shadow: 0 0 20px rgba(0, 177, 219, 0.4);
         border-color: #00b1db;
         transform: translateY(-2px);
+      }
+
+      .playing::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 177, 219, 0.15);
+        border-radius: 8px;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 0.6;
+        }
+        50% {
+          opacity: 0.3;
+        }
+        100% {
+          opacity: 0.6;
+        }
+      }
+
+      /* Add this to your existing styles */
+      .tooltip {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        z-index: 1000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        max-width: 250px;
+      }
+
+      .tooltip::before {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 6px;
+        border-style: solid;
+        border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent;
+      }
+
+      .matrix-cell {
+        position: relative;
+      }
+
+      .matrix-cell:hover .tooltip {
+        opacity: 1;
+      }
+
+      .header-cell {
+        position: relative;
+      }
+
+      .header-cell:hover .tooltip {
+        opacity: 1;
       }
 
       .country-header {
@@ -662,12 +778,23 @@
           const header = document.createElement("div");
           header.classList.add("header-cell");
           header.style.cursor = "pointer";
+
+          const tooltip = document.createElement("div");
+          tooltip.classList.add("tooltip");
+          tooltip.textContent = `Click to play traditional ${country.name} music`;
+          tooltip.style.position = "absolute";
+          tooltip.style.bottom = "calc(100% + 10px)";
+          tooltip.style.left = "50%";
+          tooltip.style.transform = "translateX(-50%)";
+
           header.innerHTML = `
-    <div class="country-header">
-      <span>${country.name}</span>
-      <span class="flag">${country.flag}</span>
-    </div>
-  `;
+      <div class="country-header">
+        <span>${country.name}</span>
+        <span class="flag">${country.flag}</span>
+      </div>
+    `;
+
+          header.appendChild(tooltip);
           header.onclick = () => {
             playAudio([country.name], header);
           };
@@ -680,12 +807,23 @@
           const rowHeader = document.createElement("div");
           rowHeader.classList.add("header-cell");
           rowHeader.style.cursor = "pointer";
+
+          const tooltip = document.createElement("div");
+          tooltip.classList.add("tooltip");
+          tooltip.textContent = `Click to play traditional ${rowCountry.name} music`;
+          tooltip.style.position = "absolute";
+          tooltip.style.bottom = "calc(100% + 10px)";
+          tooltip.style.left = "50%";
+          tooltip.style.transform = "translateX(-50%)";
+
           rowHeader.innerHTML = `
-    <div class="country-header">
-      <span>${rowCountry.name}</span>
-      <span class="flag">${rowCountry.flag}</span>
-    </div>
-  `;
+      <div class="country-header">
+        <span>${rowCountry.name}</span>
+        <span class="flag">${rowCountry.flag}</span>
+      </div>
+    `;
+
+          rowHeader.appendChild(tooltip);
           rowHeader.onclick = () => {
             playAudio([rowCountry.name], rowHeader);
           };
@@ -700,24 +838,35 @@
             cell.id = `${rowCountry.name.toLowerCase()}-${colCountry.name.toLowerCase()}`;
 
             const cellCountries = matrix[rowIndex][colIndex];
+            const tooltip = document.createElement("div");
+            tooltip.classList.add("tooltip");
+
             if (cellCountries.length === 1) {
               // Single country cell
+              tooltip.textContent = `Click to play traditional ${cellCountries[0].name} music`;
               cell.innerHTML = `
-                <div class="flags-container">
-                  <span class="flag">${cellCountries[0].flag}</span>
-                </div>
-              `;
+          <div class="flags-container">
+            <span class="flag">${cellCountries[0].flag}</span>
+          </div>
+        `;
             } else {
               // Mixed country cell
+              tooltip.textContent = `Click to play fusion of ${cellCountries[0].name} + ${cellCountries[1].name} music`;
               cell.innerHTML = `
-                <div class="flags-container">
-                  <span class="flag">${cellCountries[0].flag}</span>
-                  <span class="plus-sign">+</span>
-                  <span class="flag">${cellCountries[1].flag}</span>
-                </div>
-              `;
+          <div class="flags-container">
+            <span class="flag">${cellCountries[0].flag}</span>
+            <span class="plus-sign">+</span>
+            <span class="flag">${cellCountries[1].flag}</span>
+          </div>
+        `;
             }
 
+            tooltip.style.position = "absolute";
+            tooltip.style.bottom = "calc(100% + 10px)";
+            tooltip.style.left = "50%";
+            tooltip.style.transform = "translateX(-50%)";
+
+            cell.appendChild(tooltip);
             cell.onclick = () => {
               const countriesToPlay = cellCountries.map(
                 (country) => country.name
@@ -955,7 +1104,7 @@
           audioBufferCache.forEach((url) => URL.revokeObjectURL(url));
           audioBufferCache.clear();
         });
-        
+
         // Close when pressing Escape key
         document.addEventListener("keydown", function (e) {
           if (e.key === "Escape" && explainerOverlay.style.display !== "none") {
